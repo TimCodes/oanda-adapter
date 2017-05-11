@@ -1,0 +1,15 @@
+[
+  {
+    "time": "2017-05-11T00:15:00.000000Z",
+    "openBid": 1.08658,
+    "openAsk": 1.0867,
+    "highBid": 1.08671,
+    "highAsk": 1.08684,
+    "lowBid": 1.08648,
+    "lowAsk": 1.08662,
+    "closeBid": 1.0866,
+    "closeAsk": 1.08673,
+    "volume": 62,
+    "complete": false
+  }
+]
