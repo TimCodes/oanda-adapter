@@ -4,29 +4,14 @@ const HttpObservable = require('http-observable');
 const Rx  = require('rxjs/Rx');
 const fs = require('fs')
 
-
+const config = require('./config')
+const timeUtils = require('./TimeUtils')
 
 class OandaAdaptorRx {
 
     constructor(configObj){
 
-        this.environments = {
-            sandbox: {
-                restHost: "https://api-sandbox.oanda.com/v1/",
-                streamHost: "https://stream-sandbox.oanda.com/v1/",
-                secure: false
-            },
-            practice: {
-                restHost: "https://api-fxpractice.oanda.com/v1/",
-                streamHost: "https://stream-fxpractice.oanda.com/v1/",
-                secure: true
-            },
-            live: {
-                restHost: "https://api-fxtrade.oanda.com/v1/",
-                streamHost: "https://stream-fxtrade.oanda.com/v1/",
-                secure: true
-            }
-        }
+        this.environments = config.environments;
 
 
         this.accountId   = configObj.accountId;
@@ -37,8 +22,8 @@ class OandaAdaptorRx {
         this.secure      = this.environments[this.environment].secure;
         this.logger      = configObj.logger ||  console;
 
-        if (config.environment === "sandbox") {
-            this.username = config.username;
+        if (this.environment === "sandbox") {
+            this.username = configObj.username;
         }
     }
     
@@ -56,6 +41,37 @@ class OandaAdaptorRx {
                     .retry(10)
                     .map(d => JSON.parse(d.body).candles )
                     .catch(err => this.logger.error('error sending rest request to oanda, retry limit reached', err))
+                    
+        return  obs;
+    }
+
+     makeStreamCall(sufixURL){
+
+        let baseURL = this.restURL;
+   
+        let url     =  `${baseURL}${sufixURL}`;
+         console.log(url);
+        let options = { headers: {
+             Authorization: "Bearer " + this.accessToken,
+            
+        }}
+
+        let obs = Rx.Observable.create(function (observer) { 
+
+                    RxHR.request({uri: 'http://www.google.fr'},
+                     (error, response, body) => {
+        
+                        if (error) {
+                          observer.error(error)
+                        }
+                    })
+                    .on("data",  d =>   observer.next(d) )
+                    .on('error', err =>  observer.error(err))
+                    .on('end', () =>  observer.complete())
+                    
+
+                    return () => console.log("http stream disposed")
+               })     
                     
         return  obs;
     }
@@ -92,7 +108,7 @@ class OandaAdaptorRx {
     getOHLCSteam(symbol, timeFrame ){
 
         
-         let timeParams = this._getTimeParams(timeFrame);  
+         let timeParams = timeUtils.getTimeParams(timeFrame);  
         
          let firstBar    = this.getOHLCByCount(symbol, 1, timeFrame)
                             .map(d => d[0] );
@@ -111,7 +127,7 @@ class OandaAdaptorRx {
     getOHLCWindow(symbol, timeFrame, windowSize){
 
          let subject    = new Rx.Subject();  
-         let timeParams = this._getTimeParams(timeFrame);  
+         let timeParams = timeUtils.getTimeParams(timeFrame);  
         
 
         //emit immediately, then every 5s
@@ -134,76 +150,7 @@ class OandaAdaptorRx {
     }
 
 
-    _getTimeParams( timeFrame ){
-
-        let sec  = 1000;   
-        let min  = sec * 60;
-        let hour = min * 60;
-        let day  = hour * 24;
-
-        let timeUnit    = timeFrame[0];
-        let multiplier  = Number(timeFrame.substr(1));
-
-        let interval        = 0;
-        let startDate       = new Date();
-        let roundedValue    = this._getTimeUnitRoundedDown(multiplier, timeUnit, startDate);
-
-        switch (timeUnit) {
-            case 'S':
-                interval = multiplier * sec; 
-                startDate.setSeconds( (roundedValue + multiplier) ); 
-                break;
-            
-             case 'M':
-                interval = multiplier * min;
-                startDate.setMinutes( (roundedValue + multiplier) );
-                startDate.setSeconds(1);
-                break;
-
-             case 'H':
-                interval = multiplier * hour;
-                startDate.setHours( (roundedValue + multiplier) ); 
-                startDate.setMinutes(0);
-                startDate.setSeconds(0); 
-                break 
-             
-             case 'D':
-                 interval = multiplier * day;
-                 startDate.setDate( (roundedValue + multiplier) ); 
-                 startDate.setHours(0); 
-                 startDate.setMinutes(0);
-                 startDate.setSeconds(0);
-                break   
-
-            default:
-                break;
-        } 
-
-       return {startDate, interval}
-
-    }
-
-    _getTimeUnitRoundedDown(unitValue, unitType, date){
-
-        let units = 0;
-        var date = date || new Date();
-
-        if(unitType === "S"){
-            units = date.getSeconds();
-        }else if (unitType === "M"){
-            units = date.getMinutes();
-        }else if (unitType === "H"){
-            units = date.getHours();
-        }else if (unitType === "D"){
-            units = date.getDate();
-        }
-    
-    
-        let floor = (unitValue * Math.floor(units / unitValue));
-
-        return floor;
-    }   
-
+  
     
     
 }
@@ -212,7 +159,7 @@ let accountId  = "1560075"
 
 
 let accessToken = "f2a541bd658a95920c624f73f5d9c656-59fb5d06d799d59d054a395bbf336977"
-let config = {
+let Oconfig = {
     accountId,
     accessToken,
 }
@@ -221,7 +168,7 @@ let config = {
 let date = new Date(); 
 
 
-let od = new OandaAdaptorRx(config);
+let od = new OandaAdaptorRx(Oconfig);
 
 
 
