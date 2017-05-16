@@ -5,7 +5,7 @@ const Rx  = require('rxjs/Rx');
 const fs = require('fs')
 
 const config = require('./config')
-const timeUtils = require('./TimeUtils')
+const timeUtils = require('./Utils')
 
 class OandaAdaptorRx {
 
@@ -32,7 +32,7 @@ class OandaAdaptorRx {
         let baseURL = this.restURL;
    
         let url     =  `${baseURL}${sufixURL}`;
-       console.log(url);
+      
         let options = { headers: {
              Authorization: "Bearer " + this.accessToken,
             
@@ -45,35 +45,60 @@ class OandaAdaptorRx {
         return  obs;
     }
 
-     makeStreamCall(sufixURL){
+     makeStreamCall(suffixUrl){
 
-        let baseURL = this.restURL;
    
-        let url     =  `${baseURL}${sufixURL}`;
-         console.log(url);
-        let options = { headers: {
-             Authorization: "Bearer " + this.accessToken,
-            
-        }}
+        let url     =  `${this.streamURL}${suffixUrl}`;
+        console.log(url)    
+        let options = {
+             headers: {  Authorization: "Bearer " + this.accessToken},
+             method: 'GET',
+             encoding: 'utf8',
+             uri : url
+        
+       }
 
         let obs = Rx.Observable.create(function (observer) { 
 
-                    RxHR.request({uri: 'http://www.google.fr'},
+                    RxHR.request(options,
                      (error, response, body) => {
         
                         if (error) {
                           observer.error(error)
                         }
                     })
-                    .on("data",  d =>   observer.next(d) )
+                    .on("data",  d =>   observer.next( d ) )
                     .on('error', err =>  observer.error(err))
-                    .on('end', () =>  observer.complete())
+                    .on('end', ()  =>  observer.complete() )
                     
 
-                    return () => console.log("http stream disposed")
+                    return () => { console.log("http stream disposed") }
                })     
                     
         return  obs;
+    }
+
+
+    getPriceStream(instrumentList = []){
+        let instruments  = encodeURIComponent(instrumentList.join(''))
+        let suffixUrl    = `prices?accountId=${this.accountId}&instruments=${instruments}`
+
+        return this.makeStreamCall(suffixUrl)
+            //    .map( tickData => {
+            //         tickData.split(/\r\n/)
+            //         .forEach( line => {
+            //             // var obj = JSON.parse(line)
+            //             if (line) {
+            //                 var obj = JSON.parse(line)
+            //             }     
+
+            //             return obj || {}
+            //         });
+
+            //         return tickData    
+            //    })    
+
+
     }
 
 
@@ -172,9 +197,11 @@ let od = new OandaAdaptorRx(Oconfig);
 
 
 
-od.getOHLCSteam("EUR_USD", 'M1' )
+// od.getOHLCSteam("EUR_USD", 'M1' )
+// .subscribe(d => console.log(d))
+
+//  od.getOHLCWindow("EUR_USD", 'M1', 2)
+//  .subscribe(d => console.log(d))
+
+od.getPriceStream(['EUR_USD'])
 .subscribe(d => console.log(d))
-
- od.getOHLCWindow("EUR_USD", 'M1', 2)
- .subscribe(d => console.log(d))
-
