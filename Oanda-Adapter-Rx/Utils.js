@@ -23,7 +23,7 @@
              case 'M':
                 interval = multiplier * min;
                 startDate.setMinutes( (roundedValue + multiplier) );
-                startDate.setSeconds(1);
+                startDate.setSeconds(0);
                 break;
 
              case 'H':
@@ -69,8 +69,21 @@
 
         return floor;
     } 
+  
+   function safeJsonParse(obj) {
+        var json
+
+        try {
+            json = JSON.parse(obj);
+        } catch (err) {
+            return console.log(err);
+        }
+
+        return json;
+  }
 
 
 
   module.exports.getTimeUnitRoundedDown = getTimeUnitRoundedDown;
   module.exports.getTimeParams  = getTimeParams;  
+  module.exports.safeJsonParse = safeJsonParse;
